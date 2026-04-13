@@ -20,6 +20,12 @@ hoop_width = 80
 hoop_height = 10
 
 score = 0
+scored = False
+reset_timer = 0
+
+charging = False
+power = 0
+max_power = 25
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("PokeBallers")
@@ -27,6 +33,9 @@ pygame.display.set_caption("PokeBallers")
 clock = pygame.time.Clock()
 
 font = pygame.font.SysFont(None, 40)
+
+combo = 0
+on_fire = False
 
 while True:
   for event in pygame.event.get():
@@ -36,23 +45,27 @@ while True:
   
   keys = pygame.key.get_pressed()
 
-  # Shot
-  if keys[pygame.K_LEFT]:
-    ball_x -= speed if on_ground else speed * 0
-    direction = -1
-  if keys[pygame.K_RIGHT]:
-    ball_x += speed if on_ground else speed * 0
-    direction = 1
-
-  # Jump when on ground
-  if ball_y + ball_radius >= HEIGHT:
-    on_ground = True
+  if keys[pygame.K_SPACE]:
+    charging = True
+    power += 0.5
+    if power > max_power:
+      power = max_power
+  
   else:
-    on_ground = False
-    
-  if keys[pygame.K_SPACE] and on_ground:
-    velocity_y = -20
-    velocity_x = 6 * direction
+    if charging: 
+      velocity_y = -power
+      velocity_x = power * 0.5 * direction
+      charging = False
+      power = 0
+
+
+
+  if scored:
+    combo += 0.1
+
+    if combo >= 3:
+      on_fire = True
+
 
   # Gravity mechanic
   velocity_y += gravity
@@ -60,13 +73,20 @@ while True:
   ball_x += velocity_x
   velocity_x *= 0.98
 
-  if (hoop_x < ball_x < hoop_x + hoop_width) and (hoop_y - ball_radius < ball_y < hoop_y) and velocity_y > 0:
+  if (hoop_x < ball_x < hoop_x + hoop_width and hoop_y - ball_radius < ball_y < hoop_y and velocity_y > 0):
     score += 1
-    pygame.time.delay(300)
-    ball_x = 100
-    ball_y = HEIGHT - ball_radius
-    velocity_x = 0
-    velocity_y = 0
+    scored = True
+
+  if scored:
+    reset_timer += 1
+
+    if reset_timer > 10:
+      ball_x = 100
+      ball_y = HEIGHT - ball_radius
+      velocity_x = 0
+      velocity_y = 0
+      scored = False
+      reset_timer = 0
 
   # Collision with ground
   if ball_y + ball_radius >= HEIGHT:
@@ -82,11 +102,15 @@ while True:
   if ball_y - ball_radius < 0:
     ball_y = ball_radius
 
-
   screen.fill((30,30,30))
-  pygame.draw.circle(screen, (255, 0, 0), (ball_x, ball_y), 
-  ball_radius)
-  pygame.draw.rect(screen, (255, 165, 0), (hoop_x, hoop_y, hoop_width, hoop_height))
+  if on_fire:
+    pygame.draw.circle(screen, (255, 100, 0), (ball_x, ball_y), ball_radius + 5)
+    pygame.draw.circle(screen, (255, 0, 0), (ball_x, ball_y), ball_radius)
+  else:
+    pygame.draw.circle(screen, (255, 0, 0), (ball_x, ball_y), ball_radius)
+  
+  pygame.draw.ellipse(screen, (200, 100, 0), (hoop_x, hoop_y, hoop_width, 20), 5)
+
   score_text = font.render(f"Score: {score}", True, (255, 255, 255))
   screen.blit(score_text, (10, 10))
   pygame.display.update()
